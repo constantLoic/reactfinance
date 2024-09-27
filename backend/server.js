@@ -90,7 +90,6 @@ app.get('/api/search', async (req, res) => {
     });
   }
 }); */
-
 app.get('/api/analyze', async (req, res) => {
   const { symbol } = req.query;
   const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
@@ -100,7 +99,29 @@ app.get('/api/analyze', async (req, res) => {
   }
 
   try {
-    const response = await axios.get(`https://www.alphavantage.co/query`, {
+    console.log(`Requête pour le symbole : ${symbol}`);
+
+    // Récupérer les données d'overview
+    const overviewResponse = await axios.get(`https://www.alphavantage.co/query`, {
+      params: {
+        function: 'OVERVIEW',
+        symbol: symbol,
+        apikey: apiKey,
+      },
+    });
+
+    if (overviewResponse.data.Note) {
+      console.error("Limite d'API atteinte :", overviewResponse.data.Note);
+      return res.status(400).json({ error: 'Limite d\'API atteinte. Essayez à nouveau plus tard.' });
+    }
+
+    if (Object.keys(overviewResponse.data).length === 0) {
+      console.error(`Aucune donnée trouvée pour le symbole : ${symbol}`);
+      return res.status(400).json({ error: `Aucune donnée trouvée pour le symbole : ${symbol}` });
+    }
+
+    // Récupérer les données de Time Series Daily
+    const timeSeriesResponse = await axios.get(`https://www.alphavantage.co/query`, {
       params: {
         function: 'TIME_SERIES_DAILY',
         symbol: symbol,
@@ -108,23 +129,27 @@ app.get('/api/analyze', async (req, res) => {
       },
     });
 
-    console.log("Réponse brute de l'API Alpha Vantage:", response.data);
+    const overviewData = overviewResponse.data;
+    const timeSeriesData = timeSeriesResponse.data['Time Series (Daily)'];
 
-    if (response.data['Error Message']) {
-      return res.status(400).json({ error: response.data['Error Message'] });
+    // Vérifier si les données sont disponibles
+    if (!overviewData || Object.keys(overviewData).length === 0) {
+      return res.status(400).json({ error: 'Aucune donnée overview disponible pour ce symbole.' });
+    }
+    if (!timeSeriesData || Object.keys(timeSeriesData).length === 0) {
+      return res.status(400).json({ error: 'Aucune donnée time series disponible pour ce symbole.' });
     }
 
-    if (Object.keys(response.data).length === 0) {
-      return res.status(400).json({ error: 'Aucune donnée disponible pour ce symbole.' });
-    }
-
-    res.json(response.data);
+    // Retourner les deux types de données
+    res.json({
+      overview: overviewData,
+      timeSeries: timeSeriesData,
+    });
   } catch (error) {
-    console.error('Erreur lors de la récupération des données du titre:', error.message);
+    console.error('Erreur lors de la récupération des données:', error.message);
     res.status(500).json({ error: 'Erreur lors de la récupération des données du titre' });
   }
 });
-
 
 
 // Lancer le serveur

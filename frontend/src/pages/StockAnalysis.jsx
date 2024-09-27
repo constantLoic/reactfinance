@@ -8,11 +8,11 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const StockAnalysis = () => {
-  const { symbol } = useParams();
+  const { symbol } = useParams(); // Récupérer le symbole du titre depuis l'URL
   const [analysis, setAnalysis] = useState(null);
+  const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [chartData, setChartData] = useState(null);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -21,28 +21,27 @@ const StockAnalysis = () => {
           params: { symbol }
         });
         console.log("Réponse de l'API:", response.data);
-        setAnalysis(response.data);
 
-        // Supposons que tu utilises "Time Series (Daily)" pour les graphiques de prix.
-        const timeSeries = response.data['Time Series (Daily)'];
-        if (timeSeries) {
-          // Extraire les dates et les prix de fermeture
-          const dates = Object.keys(timeSeries).slice(0, 30).reverse(); // Récupère les 30 derniers jours
-          const closingPrices = dates.map(date => timeSeries[date]['4. close']);
+        const { overview, timeSeries } = response.data;
 
-          // Configurer les données pour Chart.js
-          setChartData({
-            labels: dates,
-            datasets: [
-              {
-                label: 'Prix de fermeture (USD)',
-                data: closingPrices,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              },
-            ],
-          });
-        }
+        // Stocker les données overview
+        setAnalysis(overview);
+
+        // Traiter les données de séries temporelles pour le graphique
+        const dates = Object.keys(timeSeries).slice(0, 30).reverse(); // Récupère les 30 derniers jours
+        const closingPrices = dates.map(date => timeSeries[date]['4. close']);
+
+        setChartData({
+          labels: dates,
+          datasets: [
+            {
+              label: 'Prix de fermeture (USD)',
+              data: closingPrices,
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            },
+          ],
+        });
 
         setLoading(false);
       } catch (err) {
@@ -118,4 +117,3 @@ const StockAnalysis = () => {
 };
 
 export default StockAnalysis;
-
