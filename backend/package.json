@@ -14,6 +14,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "finnhub": "^1.2.18",
+    "openai": "^4.68.4",
     "yahoo-finance2": "^2.11.3"
   }
 }
